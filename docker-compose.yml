@@ -31,7 +31,7 @@ services:
       - "8050:8050"
 
   coincidences-analyzer:
-    image: ghcr.io/measurement-plane/coincidences-analyzer-agent:latest
+    image: ghcr.io/measurement-plane/coincidences-analyzer:latest
     container_name: coincidences_analyzer_agent_container
     environment:
       - BROKER_URL=${BROKER_URL}
