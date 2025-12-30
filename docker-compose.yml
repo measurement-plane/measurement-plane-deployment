@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+
+  nats:
+    image: nats:2.10
+    container_name: nats
+    ports:
+      - "4222:4222"
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf:ro
+    command: ["-c", "/etc/nats/nats.conf"]
+
+  experiment-orchestrator:
+    image: ghcr.io/measurement-plane/experiment-orchestrator:latest
+    container_name: experiment-orchestrator
+    environment:
+      - BROKER_URL=${BROKER_URL}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - nats
+
+  measurement-plane-gui:
+    image: ghcr.io/measurement-plane/gui:latest
+    container_name: measurement_plane_gui
+    environment:
+      - BROKER_URL=${BROKER_URL}
+      - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
+    ports:
+      - "8050:8050"
+
+  coincidences-analyzer:
+    image: ghcr.io/measurement-plane/coincidences-analyzer-agent:latest
+    container_name: coincidences_analyzer_agent_container
+    environment:
+      - BROKER_URL=${BROKER_URL}
+      - ENDPOINT=coincidences_analyzer
+    depends_on:
+      - nats
+
+  polarization-analyzer:
+    image: ghcr.io/measurement-plane/ploarization-analyzer:latest
+    container_name: polarization_analyzer_container
+    environment:
+      - BROKER_URL=${BROKER_URL}
+      - ENDPOINT=polarization_analyzer
+    depends_on:
+      - nats
