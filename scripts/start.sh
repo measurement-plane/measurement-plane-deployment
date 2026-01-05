@@ -14,10 +14,10 @@ echo "Pruning old networks..."
 docker network prune -f
 
 echo "Pulling images..."
-docker compose pull
+docker compose pull --policy=always
 
 echo "Starting stack..."
-docker compose up -d --force-recreate
+docker compose up --force-recreate
 
 echo ""
 echo "System ready:"
