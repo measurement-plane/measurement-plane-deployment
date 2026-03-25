@@ -178,4 +178,6 @@ Stop it from another terminal:
 
 - `detection-agent` and `polarization-controller` are resource agents and can be deployed independently on resource-adjacent hosts
 - `apc-service` is a core-side capability and should be deployed with the core stack
+- `apc-service` keeps a small public contract: `start`, `stop`, and `check_link`
 - `polarization-analyzer` continues to use the same APC-aware workflow, but it now talks to the standalone APC service instead of APC logic embedded in the polarization-controller repo
+- if needed, analyzer calls can override the default APC target by passing `ip_address`, `port`, and `device_id` in the APC parameter block
