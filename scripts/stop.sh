@@ -1,13 +1,6 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "Stopping stack..."
-docker compose down --remove-orphans
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Force removing any leftovers..."
-docker rm -f \
-  measurement_plane_gui \
-  experiment-orchestrator \
-  coincidences_analyzer_agent_container \
-  polarization_analyzer_container \
-  nats 2>/dev/null || true
+"$SCRIPT_DIR/stop-core.sh"

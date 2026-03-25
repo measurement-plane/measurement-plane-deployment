@@ -38,7 +38,7 @@ services:
       - nats
 
   polarization-analyzer:
-    image: ghcr.io/measurement-plane/ploarization-analyzer:latest
+    image: ghcr.io/measurement-plane/polarization-analyzer:latest
     container_name: polarization_analyzer_container
     environment:
       - BROKER_URL=${BROKER_URL}
