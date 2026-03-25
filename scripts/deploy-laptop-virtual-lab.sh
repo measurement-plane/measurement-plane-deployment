@@ -8,6 +8,7 @@ ALICE_DETECTOR_ENV="${ALICE_DETECTOR_ENV:-$ROOT_DIR/env/detection-agent-virtual-
 BOB_DETECTOR_ENV="${BOB_DETECTOR_ENV:-$ROOT_DIR/env/detection-agent-virtual-bob.env}"
 ALICE_POLARIZER_ENV="${ALICE_POLARIZER_ENV:-$ROOT_DIR/env/polarization-controller-virtual-alice.env}"
 BOB_POLARIZER_ENV="${BOB_POLARIZER_ENV:-$ROOT_DIR/env/polarization-controller-virtual-bob.env}"
+CORE_ENV_FILE="${CORE_ENV_FILE:-$ROOT_DIR/env/core-virtual-lab.env}"
 
 cleanup() {
   echo
@@ -16,7 +17,7 @@ cleanup() {
   ENV_FILE="$BOB_DETECTOR_ENV" "$SCRIPT_DIR/stop-detection-agent.sh" || true
   ENV_FILE="$ALICE_POLARIZER_ENV" "$SCRIPT_DIR/stop-polarization-controller.sh" || true
   ENV_FILE="$BOB_POLARIZER_ENV" "$SCRIPT_DIR/stop-polarization-controller.sh" || true
-  "$SCRIPT_DIR/stop-core.sh" || true
+  ENV_FILE="$CORE_ENV_FILE" "$SCRIPT_DIR/stop-core.sh" || true
 }
 
 trap cleanup INT TERM
@@ -31,6 +32,6 @@ ENV_FILE="$BOB_POLARIZER_ENV" "$SCRIPT_DIR/deploy-polarization-controller.sh"
 
 echo "Starting core stack..."
 echo "Press Ctrl+C to stop the full virtual lab."
-"$SCRIPT_DIR/deploy-core.sh"
+ENV_FILE="$CORE_ENV_FILE" "$SCRIPT_DIR/deploy-core.sh"
 
 cleanup

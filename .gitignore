@@ -1,6 +1,8 @@
 .env
 .env.*
 env/*.env
+!env/core.env.example
+!env/core-virtual-lab.env
 docker-compose.override.yml
 .vscode/
 .idea/
