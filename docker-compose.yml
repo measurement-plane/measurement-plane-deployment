@@ -15,7 +15,7 @@ services:
     environment:
       - BROKER_URL=${BROKER_URL}
     ports:
-      - "8080:8080"
+      - "${ORCHESTRATOR_HOST_PORT:-18080}:8080"
     depends_on:
       - nats
 

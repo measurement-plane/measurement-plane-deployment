@@ -68,6 +68,7 @@ Example core variables:
 ```env
 BROKER_URL=nats://nats:4222
 ORCHESTRATOR_URL=http://experiment-orchestrator:8080
+ORCHESTRATOR_HOST_PORT=18080
 APC_ENDPOINT=/apc/main
 APC_DRIVER_TYPE=qunnect
 APC_API_BASE_URL=http://10.0.0.25:8000/qunnect-api
@@ -85,7 +86,7 @@ Notes:
 Core endpoints:
 
 - GUI: `http://localhost:8050`
-- orchestrator API: `http://localhost:8080`
+- orchestrator API: `http://localhost:18080`
 - NATS: `localhost:4222`
 
 ## Detection Agent Deployment
