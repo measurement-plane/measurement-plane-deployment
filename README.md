@@ -157,6 +157,41 @@ Run:
 ./scripts/deploy-laptop-virtual-lab.sh
 ```
 
+## GUI Authentication And Presets
+
+The GUI now keeps a small SQLite database for:
+
+- user accounts
+- named per-capability presets
+- last-used values per user/capability
+
+The database is stored through the `gui-data` Docker volume and defaults to `/data/gui.db` inside the GUI container.
+
+Relevant core env vars:
+
+- `GUI_SECRET_KEY`
+- `GUI_DB_PATH`
+- `GUI_DB_PATH_DIR`
+- `GUI_BOOTSTRAP_ADMIN_USERNAME`
+- `GUI_BOOTSTRAP_ADMIN_PASSWORD`
+
+Default bootstrap login:
+
+- username: `admin`
+- password: `admin`
+
+Change these values before real-lab deployment.
+
+## Real Lab Note
+
+For a real deployment from the central node, the GUI database stays local to the core host. You do not need a separate database service. As long as the central node preserves the `gui-data` Docker volume, user accounts and presets remain available across restarts:
+
+```bash
+LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
+```
+
+The remote Alice and Bob nodes do not need the GUI database.
+
 This script uses:
 
 - `env/detection-agent-virtual-alice.env`
