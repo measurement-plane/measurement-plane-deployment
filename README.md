@@ -8,6 +8,7 @@ It supports:
 - standalone resource-agent deployment for `detection-agent`
 - standalone resource-agent deployment for `polarization-controller`
 - one-command local virtual-lab deployment
+- one-command real-lab deployment from a central node over SSH
 
 ## Core Stack
 
@@ -27,6 +28,7 @@ The APC service is part of the core stack because it talks to a remote APC over 
 - `docker-compose.yml`: core stack definition
 - `.env`: default core environment
 - `env/core-virtual-lab.env`: tracked env file for the local virtual-lab setup
+- `env/real-lab.env.example`: example multi-node real-lab deployment config
 - `env/detection-agent.env.example`: example detection-agent configuration
 - `env/polarization-controller.env.example`: example polarization-controller configuration
 - `scripts/deploy-core.sh`: start the core stack
@@ -37,6 +39,8 @@ The APC service is part of the core stack because it talks to a remote APC over 
 - `scripts/stop-polarization-controller.sh`: stop one polarization-control resource agent
 - `scripts/deploy-laptop-virtual-lab.sh`: launch the local virtual lab
 - `scripts/stop-laptop-virtual-lab.sh`: stop the local virtual lab
+- `scripts/deploy-real-lab.sh`: deploy the full real lab from the central node
+- `scripts/stop-real-lab.sh`: stop the full real lab from the central node
 
 ## Core Deployment
 
@@ -174,9 +178,112 @@ Stop it from another terminal:
 ./scripts/stop-laptop-virtual-lab.sh
 ```
 
+## Real Lab Deployment
+
+The real-lab deployment model is:
+
+- central node runs the core stack
+- Alice host runs the Alice hardware-adjacent agents
+- Bob host runs the Bob hardware-adjacent agents
+- the central node deploys the remote hosts over SSH
+
+The remote hosts do not need the repo preinstalled manually. The deployment script synchronizes the
+`measurement-plane-deployment` directory to the target path and then runs the existing per-node deployment scripts there.
+
+### SSH Recommendation
+
+Use SSH keys or SSH config aliases.
+
+Do not store SSH passwords in this repository or in tracked env files.
+
+Recommended:
+
+```sshconfig
+Host alice-qnet
+    HostName 10.0.0.21
+    User labuser
+    IdentityFile ~/.ssh/qnet_lab
+
+Host bob-qnet
+    HostName 10.0.0.22
+    User labuser
+    IdentityFile ~/.ssh/qnet_lab
+```
+
+Then your real-lab env can use:
+
+```env
+ALICE_SSH_TARGET=alice-qnet
+BOB_SSH_TARGET=bob-qnet
+```
+
+### Setup
+
+1. Copy the example lab config:
+
+```bash
+cp env/real-lab.env.example env/real-lab.env
+```
+
+2. Create the real hardware env files referenced there, for example:
+
+```bash
+cp env/detection-agent.env.example env/detection-agent-alice.env
+cp env/detection-agent.env.example env/detection-agent-bob.env
+cp env/polarization-controller.env.example env/polarization-controller-alice.env
+cp env/polarization-controller.env.example env/polarization-controller-bob.env
+```
+
+3. Update:
+
+- `env/real-lab.env`
+- `env/detection-agent-alice.env`
+- `env/detection-agent-bob.env`
+- `env/polarization-controller-alice.env`
+- `env/polarization-controller-bob.env`
+- your central-node core env file, typically `.env`
+
+Important:
+
+- on remote Alice/Bob hosts, set `BROKER_URL` to the central node's reachable QNet IP, for example:
+  - `nats://10.0.0.10:4222`
+- detection and polarization controller endpoints should be unique and stable
+- remote hosts must have Docker, `bash`, `tar`, and SSH access enabled
+
+### Deploy
+
+From the central node:
+
+```bash
+LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
+```
+
+This will:
+
+- deploy the core locally in detached mode
+- synchronize the deployment repo to Alice and Bob
+- deploy detection and polarization-controller containers on both remote hosts
+
+### Stop
+
+From the central node:
+
+```bash
+LAB_ENV_FILE=env/real-lab.env ./scripts/stop-real-lab.sh
+```
+
+### Dry Run
+
+To print what would be executed without actually deploying:
+
+```bash
+DRY_RUN=1 LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
+```
+
 ## Deployment Model
 
 - `detection-agent` and `polarization-controller` are resource agents and can be deployed independently on resource-adjacent hosts
+- in a real lab, those resource agents should run on the remote hardware-adjacent hosts and connect back to the central node broker
 - `apc-service` is a core-side capability and should be deployed with the core stack
 - `apc-service` keeps a small public contract: `start`, `stop`, and `check_link`
 - `polarization-analyzer` continues to use the same APC-aware workflow, but it now talks to the standalone APC service instead of APC logic embedded in the polarization-controller repo
