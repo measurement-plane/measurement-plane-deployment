@@ -53,8 +53,6 @@ services:
       - BROKER_URL=${BROKER_URL}
       - ENDPOINT=${APC_ENDPOINT:-/apc/main}
       - APC_DRIVER_TYPE=${APC_DRIVER_TYPE:-qunnect}
-      - APC_API_BASE_URL=${APC_API_BASE_URL:-http://127.0.0.1:8000/qunnect-api}
-      - APC_DEVICE_ID=${APC_DEVICE_ID:-apc-01}
       - APC_REQUEST_TIMEOUT_S=${APC_REQUEST_TIMEOUT_S:-10}
       - APC_VERIFY_SSL=${APC_VERIFY_SSL:-true}
     depends_on:

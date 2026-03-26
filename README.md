@@ -71,8 +71,6 @@ ORCHESTRATOR_URL=http://experiment-orchestrator:8080
 ORCHESTRATOR_HOST_PORT=18080
 APC_ENDPOINT=/apc/main
 APC_DRIVER_TYPE=qunnect
-APC_API_BASE_URL=http://10.0.0.25:8000/qunnect-api
-APC_DEVICE_ID=apc-01
 APC_REQUEST_TIMEOUT_S=10
 APC_VERIFY_SSL=true
 ```
@@ -202,8 +200,6 @@ cp env/core-hybrid-real-apc.env.example env/core-hybrid-real-apc.env
 
 Then edit:
 
-- `APC_API_BASE_URL`
-- `APC_DEVICE_ID`
 - `APC_VERIFY_SSL`
 
 Run:
@@ -335,4 +331,4 @@ DRY_RUN=1 LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
 - `apc-service` is a core-side capability and should be deployed with the core stack
 - `apc-service` keeps a small public contract: `start`, `stop`, and `check_link`
 - `polarization-analyzer` continues to use the same APC-aware workflow, but it now talks to the standalone APC service instead of APC logic embedded in the polarization-controller repo
-- if needed, analyzer calls can override the default APC target by passing only `ip_address`, `port`, and `device_id` in the APC parameter block
+- in real APC mode, analyzer calls must provide `ip_address`, `port`, and `device_id` in the APC parameter block
