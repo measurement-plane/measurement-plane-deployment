@@ -25,14 +25,6 @@ services:
     environment:
       - BROKER_URL=${BROKER_URL}
       - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
-      - ORCHESTRATOR_PUBLIC_URL=${ORCHESTRATOR_PUBLIC_URL:-http://localhost:8080}
-      - GUI_SECRET_KEY=${GUI_SECRET_KEY:-measurement-plane-gui-secret}
-      - GUI_DEBUG=${GUI_DEBUG:-false}
-      - GUI_DB_PATH=${GUI_DB_PATH:-/data/gui.db}
-      - GUI_BOOTSTRAP_ADMIN_USERNAME=${GUI_BOOTSTRAP_ADMIN_USERNAME:-admin}
-      - GUI_BOOTSTRAP_ADMIN_PASSWORD=${GUI_BOOTSTRAP_ADMIN_PASSWORD:-admin}
-    volumes:
-      - gui-data:${GUI_DB_PATH_DIR:-/data}
     ports:
       - "8050:8050"
 
@@ -67,6 +59,3 @@ services:
       - APC_VERIFY_SSL=${APC_VERIFY_SSL:-true}
     depends_on:
       - nats
-
-volumes:
-  gui-data:
