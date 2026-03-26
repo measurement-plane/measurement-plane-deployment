@@ -3,6 +3,10 @@
 env/*.env
 !env/core.env.example
 !env/core-virtual-lab.env
+!env/detection-agent-virtual-alice.env
+!env/detection-agent-virtual-bob.env
+!env/polarization-controller-virtual-alice.env
+!env/polarization-controller-virtual-bob.env
 docker-compose.override.yml
 .vscode/
 .idea/
