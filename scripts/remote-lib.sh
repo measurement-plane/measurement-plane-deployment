@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DRY_RUN="${DRY_RUN:-0}"
 SSH_COMMON_ARGS="${SSH_COMMON_ARGS:-}"
+REMOTE_DOCKER_START_CMD="${REMOTE_DOCKER_START_CMD:-sudo -n systemctl start docker || systemctl start docker || sudo -n service docker start || service docker start}"
 
 load_env_file() {
   local env_path="$1"
@@ -96,6 +97,26 @@ sync_repo_to_remote() {
     "bash -lc $(printf '%q' "mkdir -p $remote_root_expr && tar -xf - -C $remote_root_expr")"
 }
 
+ensure_remote_docker() {
+  local ssh_target="$1"
+  local docker_start_cmd="$2"
+
+  run_remote_shell "$ssh_target" "
+    if ! command -v docker >/dev/null 2>&1; then
+      echo 'docker was not found on remote host' >&2
+      exit 1
+    fi
+    if docker info >/dev/null 2>&1; then
+      exit 0
+    fi
+    $docker_start_cmd >/dev/null 2>&1 || true
+    if ! docker info >/dev/null 2>&1; then
+      echo 'docker is installed but the daemon is not reachable on the remote host' >&2
+      exit 1
+    fi
+  "
+}
+
 deploy_core_detached() {
   local env_file="$1"
   local command="
@@ -123,9 +144,11 @@ deploy_remote_agent() {
   local remote_root="$2"
   local env_file="$3"
   local script_name="$4"
+  local docker_start_cmd="${5:-$REMOTE_DOCKER_START_CMD}"
   local remote_root_expr
   remote_root_expr="$(remote_path_expr "$remote_root")"
 
+  ensure_remote_docker "$ssh_target" "$docker_start_cmd"
   sync_repo_to_remote "$ssh_target" "$remote_root"
   run_remote_shell "$ssh_target" "cd $remote_root_expr && ENV_FILE=$(printf '%q' "$env_file") ./scripts/$script_name"
 }

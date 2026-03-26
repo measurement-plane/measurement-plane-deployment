@@ -30,7 +30,11 @@ The APC service is part of the core stack because it talks to a remote APC over 
 - `env/core-virtual-lab.env`: tracked env file for the local virtual-lab setup
 - `env/real-lab.env.example`: example multi-node real-lab deployment config
 - `env/detection-agent.env.example`: example detection-agent configuration
+- `env/detection-agent-alice.env.example`: example Alice detection-agent config
+- `env/detection-agent-bob.env.example`: example Bob detection-agent config
 - `env/polarization-controller.env.example`: example polarization-controller configuration
+- `env/polarization-controller-alice.env.example`: example Alice polarization-controller config
+- `env/polarization-controller-bob.env.example`: example Bob polarization-controller config
 - `scripts/deploy-core.sh`: start the core stack
 - `scripts/stop-core.sh`: stop the core stack
 - `scripts/deploy-detection-agent.sh`: deploy one detection resource agent
@@ -190,6 +194,8 @@ The real-lab deployment model is:
 The remote hosts do not need the repo preinstalled manually. The deployment script synchronizes the
 `measurement-plane-deployment` directory to the target path and then runs the existing per-node deployment scripts there.
 
+Before deploying a remote agent, the helper checks whether Docker is reachable on the remote host. If the Docker daemon is not running, it tries to start it using common service commands.
+
 ### SSH Recommendation
 
 Use SSH keys or SSH config aliases.
@@ -228,10 +234,10 @@ cp env/real-lab.env.example env/real-lab.env
 2. Create the real hardware env files referenced there, for example:
 
 ```bash
-cp env/detection-agent.env.example env/detection-agent-alice.env
-cp env/detection-agent.env.example env/detection-agent-bob.env
-cp env/polarization-controller.env.example env/polarization-controller-alice.env
-cp env/polarization-controller.env.example env/polarization-controller-bob.env
+cp env/detection-agent-alice.env.example env/detection-agent-alice.env
+cp env/detection-agent-bob.env.example env/detection-agent-bob.env
+cp env/polarization-controller-alice.env.example env/polarization-controller-alice.env
+cp env/polarization-controller-bob.env.example env/polarization-controller-bob.env
 ```
 
 3. Update:
@@ -249,6 +255,9 @@ Important:
   - `nats://10.0.0.10:4222`
 - detection and polarization controller endpoints should be unique and stable
 - remote hosts must have Docker, `bash`, `tar`, and SSH access enabled
+- here `bash` means a normal Linux shell environment on the remote node, not Git Bash on Windows
+- if Docker is installed but the daemon is not running after a reboot, the deployment helper tries to start it automatically
+- if your lab hosts require a nonstandard Docker start command, set `REMOTE_DOCKER_START_CMD` in `env/real-lab.env`
 
 ### Deploy
 
