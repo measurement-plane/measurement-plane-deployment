@@ -28,6 +28,7 @@ The APC service is part of the core stack because it talks to a remote APC over 
 - `docker-compose.yml`: core stack definition
 - `.env`: default core environment
 - `env/core-virtual-lab.env`: tracked env file for the local virtual-lab setup
+- `env/core-hybrid-real-apc.env.example`: example local hybrid env for virtual TT/polarizers with a real APC
 - `env/real-lab.env.example`: example multi-node real-lab deployment config
 - `env/detection-agent.env.example`: example detection-agent configuration
 - `env/detection-agent-alice.env.example`: example Alice detection-agent config
@@ -181,6 +182,43 @@ Stop it from another terminal:
 ```bash
 ./scripts/stop-laptop-virtual-lab.sh
 ```
+
+## Local Hybrid Lab
+
+If you want:
+
+- virtual Alice/Bob timetaggers
+- virtual Alice/Bob polarization controllers
+- real APC through its REST API
+
+then use the same local virtual-lab launcher, but point it at a core env file with a real APC configuration.
+
+Setup:
+
+```bash
+cp env/core-hybrid-real-apc.env.example env/core-hybrid-real-apc.env
+```
+
+Then edit:
+
+- `APC_API_BASE_URL`
+- `APC_DEVICE_ID`
+- `APC_VERIFY_SSL`
+
+Run:
+
+```bash
+CORE_ENV_FILE=env/core-hybrid-real-apc.env ./scripts/deploy-laptop-virtual-lab.sh
+```
+
+This keeps these tracked virtual agent env files:
+
+- `env/detection-agent-virtual-alice.env`
+- `env/detection-agent-virtual-bob.env`
+- `env/polarization-controller-virtual-alice.env`
+- `env/polarization-controller-virtual-bob.env`
+
+and only switches the core APC service from virtual to real.
 
 ## Real Lab Deployment
 
