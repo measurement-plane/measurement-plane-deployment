@@ -51,6 +51,9 @@ docker pull "$IMAGE_NAME"
 
 echo "Starting polarization-controller container..."
 DOCKER_CMD="MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker run -d --name \"$CONTAINER_NAME\""
+if [[ "$BROKER_URL" == *"host.docker.internal"* ]] && [[ "$DOCKER_EXTRA_ARGS" != *"--add-host=host.docker.internal:host-gateway"* ]]; then
+  DOCKER_CMD+=" --add-host=host.docker.internal:host-gateway"
+fi
 if [[ "$DRIVER_TYPE" != "virtual" && "$DRIVER_TYPE" != "dummy" ]]; then
   DOCKER_CMD+=" --device=\"$HWP_ADDR\""
   DOCKER_CMD+=" --device=\"$QWP_ADDR\""

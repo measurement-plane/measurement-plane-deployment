@@ -70,6 +70,9 @@ docker pull "$IMAGE_NAME"
 echo "Starting detection-agent container..."
 DOCKER_CMD="MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker run -d --name \"$CONTAINER_NAME\""
 DOCKER_CMD+=" --privileged"
+if [[ "$BROKER_URL" == *"host.docker.internal"* ]] && [[ "$DOCKER_EXTRA_ARGS" != *"--add-host=host.docker.internal:host-gateway"* ]]; then
+  DOCKER_CMD+=" --add-host=host.docker.internal:host-gateway"
+fi
 DOCKER_CMD+=" -e BROKER_URL=\"$BROKER_URL\""
 DOCKER_CMD+=" -e ENDPOINT=\"$ENDPOINT\""
 DOCKER_CMD+=" -e TT_TYPE=\"$TT_TYPE\""
