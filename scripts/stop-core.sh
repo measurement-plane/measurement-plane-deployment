@@ -16,5 +16,6 @@ docker rm -f \
   experiment-orchestrator \
   coincidences_analyzer_agent_container \
   polarization_analyzer_container \
+  twtt_capability_container \
   apc_service_container \
   nats 2>/dev/null || true

@@ -121,7 +121,7 @@ deploy_core_detached() {
   local env_file="$1"
   local command="
     cd $(printf '%q' "$ROOT_DIR") && \
-    docker rm -f measurement_plane_gui experiment-orchestrator coincidences_analyzer_agent_container polarization_analyzer_container apc_service_container nats >/dev/null 2>&1 || true && \
+    docker rm -f measurement_plane_gui experiment-orchestrator coincidences_analyzer_agent_container polarization_analyzer_container twtt_capability_container apc_service_container nats >/dev/null 2>&1 || true && \
     docker network prune -f >/dev/null 2>&1 || true && \
     docker compose --env-file $(printf '%q' "$env_file") pull && \
     docker compose --env-file $(printf '%q' "$env_file") up -d --force-recreate
@@ -134,7 +134,7 @@ stop_core_detached() {
   local command="
     cd $(printf '%q' "$ROOT_DIR") && \
     docker compose --env-file $(printf '%q' "$env_file") down --remove-orphans && \
-    docker rm -f measurement_plane_gui experiment-orchestrator coincidences_analyzer_agent_container polarization_analyzer_container apc_service_container nats >/dev/null 2>&1 || true
+    docker rm -f measurement_plane_gui experiment-orchestrator coincidences_analyzer_agent_container polarization_analyzer_container twtt_capability_container apc_service_container nats >/dev/null 2>&1 || true
   "
   run_local_shell "$command"
 }

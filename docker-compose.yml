@@ -46,6 +46,16 @@ services:
     depends_on:
       - nats
 
+  twtt-capability:
+    image: ghcr.io/measurement-plane/twtt-capability:latest
+    container_name: twtt_capability_container
+    environment:
+      - BROKER_URL=${BROKER_URL}
+      - ENDPOINT=${TWTT_ENDPOINT:-/twtt}
+    depends_on:
+      - nats
+      - coincidences-analyzer
+
   apc-service:
     image: ghcr.io/measurement-plane/apc-service:latest
     container_name: apc_service_container

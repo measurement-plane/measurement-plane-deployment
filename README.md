@@ -19,9 +19,14 @@ The core deployment now includes:
 - Measurement Plane GUI
 - coincidences analyzer
 - polarization analyzer
+- two-way time transfer (TWTT) capability
 - APC service
 
-The APC service is part of the core stack because it talks to a remote APC over its API. It is not deployed as a resource agent next to a device host.
+The TWTT capability is a core-side analyzer. It discovers the coincidences
+analyzer through the broker, runs the two configured directions, and combines
+their peaks into time-offset and time-of-flight results. The APC service is
+also part of the core stack because it talks to a remote APC over its API. It
+is not deployed as a resource agent next to a device host.
 
 ## Layout
 
@@ -69,6 +74,7 @@ Example core variables:
 BROKER_URL=nats://nats:4222
 ORCHESTRATOR_URL=http://experiment-orchestrator:8080
 ORCHESTRATOR_HOST_PORT=18080
+TWTT_ENDPOINT=/twtt
 APC_ENDPOINT=/apc/main
 APC_DRIVER_TYPE=qunnect
 APC_REQUEST_TIMEOUT_S=10
@@ -329,6 +335,8 @@ DRY_RUN=1 LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
 - `detection-agent` and `polarization-controller` are resource agents and can be deployed independently on resource-adjacent hosts
 - in a real lab, those resource agents should run on the remote hardware-adjacent hosts and connect back to the central node broker
 - `apc-service` is a core-side capability and should be deployed with the core stack
+- `twtt-capability` is a core-side analyzer and is deployed with the core stack, alongside `coincidences-analyzer` and `polarization-analyzer`
+- `twtt-capability` uses `ghcr.io/measurement-plane/twtt-capability:latest` and advertises `measure-twtt` at `TWTT_ENDPOINT` (default `/twtt`)
 - `apc-service` keeps a small public contract: `start`, `stop`, and `check_link`
 - `polarization-analyzer` continues to use the same APC-aware workflow, but it now talks to the standalone APC service instead of APC logic embedded in the polarization-controller repo
 - in real APC mode, analyzer calls must provide `ip_address`, `port`, and `device_id` in the APC parameter block
