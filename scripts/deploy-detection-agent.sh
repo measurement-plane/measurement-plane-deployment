@@ -24,6 +24,10 @@ TT_EVENT_DIVIDERS="${TT_EVENT_DIVIDERS:-1=10,2=10,3=10,4=10}"
 TT_DEAD_TIMES="${TT_DEAD_TIMES:-}"
 TT_DELAYS="${TT_DELAYS:-}"
 DOCKER_EXTRA_ARGS="${DOCKER_EXTRA_ARGS:-}"
+TIMETAGGER_USB_AUTO_ATTACH="${TIMETAGGER_USB_AUTO_ATTACH:-true}"
+TIMETAGGER_USB_HARDWARE_ID="${TIMETAGGER_USB_HARDWARE_ID:-151f:0023}"
+FOLLOW_LOGS="${FOLLOW_LOGS:-true}"
+LOG_TAIL="${LOG_TAIL:-100}"
 
 load_env_file() {
   local env_path="$1"
@@ -60,12 +64,66 @@ if [[ -f "$ENV_FILE" ]]; then
   load_env_file "$ENV_FILE"
 fi
 
+is_true() {
+  case "${1,,}" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_windows_shell() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+ensure_windows_timetagger_attached() {
+  local device_line
+
+  if ! is_windows_shell || [[ "${TT_TYPE,,}" != "swabian" ]] || ! is_true "$TIMETAGGER_USB_AUTO_ATTACH"; then
+    return
+  fi
+
+  if ! command -v usbipd.exe >/dev/null 2>&1; then
+    echo "Error: usbipd-win is required to expose the Time Tagger to Docker Desktop."
+    exit 1
+  fi
+
+  device_line="$(usbipd.exe list 2>/dev/null | tr -d '\r' | grep -i "$TIMETAGGER_USB_HARDWARE_ID" || true)"
+  if [[ -z "$device_line" ]]; then
+    echo "Error: no Time Tagger USB device with hardware ID $TIMETAGGER_USB_HARDWARE_ID was found."
+    exit 1
+  fi
+
+  if [[ "$device_line" == *"Attached"* ]]; then
+    echo "Time Tagger USB device is already attached to Docker Desktop."
+    return
+  fi
+
+  if [[ "$device_line" == *"Not shared"* ]]; then
+    echo "Error: the Time Tagger USB device has not been shared with usbipd-win."
+    echo "Run this once from an Administrator PowerShell, then retry:"
+    echo "  usbipd bind --hardware-id $TIMETAGGER_USB_HARDWARE_ID"
+    exit 1
+  fi
+
+  echo "Attaching Time Tagger USB device $TIMETAGGER_USB_HARDWARE_ID to Docker Desktop..."
+  if ! usbipd.exe attach --wsl --hardware-id "$TIMETAGGER_USB_HARDWARE_ID"; then
+    echo "Error: failed to attach the Time Tagger to Docker Desktop."
+    echo "Confirm Docker Desktop is running, then retry."
+    exit 1
+  fi
+}
+
 echo "Stopping and removing existing detection-agent container (if any)..."
 docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
 docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
 
 echo "Pulling detection-agent image..."
 docker pull "$IMAGE_NAME"
+
+ensure_windows_timetagger_attached
 
 echo "Starting detection-agent container..."
 DOCKER_CMD="MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker run -d --name \"$CONTAINER_NAME\""
@@ -105,3 +163,8 @@ echo "Detection agent deployed:"
 echo "  container: $CONTAINER_NAME"
 echo "  endpoint : $ENDPOINT"
 echo "  broker   : $BROKER_URL"
+
+if is_true "$FOLLOW_LOGS"; then
+  echo "Following logs; press Ctrl+C to stop viewing them. The container will keep running."
+  docker logs --tail "$LOG_TAIL" --follow "$CONTAINER_NAME"
+fi

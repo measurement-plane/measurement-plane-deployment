@@ -117,6 +117,25 @@ ENV_FILE=env/detection-agent.env ./scripts/stop-detection-agent.sh
 
 For laptop testing, use `BROKER_URL=nats://host.docker.internal:4222`.
 
+### Windows Time Tagger USB access
+
+Docker Desktop does not retain a USB attachment when Windows or WSL restarts. Sharing the device is persistent, so run this once from an Administrator PowerShell on each laptop:
+
+```powershell
+usbipd bind --hardware-id 151f:0023
+```
+
+For `TT_TYPE=swabian`, the deployment script then automatically attaches that hardware ID to Docker Desktop every time it runs. The default settings are:
+
+```env
+TIMETAGGER_USB_AUTO_ATTACH=true
+TIMETAGGER_USB_HARDWARE_ID=151f:0023
+FOLLOW_LOGS=true
+LOG_TAIL=100
+```
+
+The container remains detached and continues running when `Ctrl+C` stops log viewing. Set `FOLLOW_LOGS=false` for non-interactive deployment.
+
 ## Polarization Controller Deployment
 
 Use `polarization-controller` on a host connected to the waveplate controller hardware.
