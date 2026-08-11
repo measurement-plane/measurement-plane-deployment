@@ -130,6 +130,7 @@ For `TT_TYPE=swabian`, the deployment script then automatically attaches that ha
 ```env
 TIMETAGGER_USB_AUTO_ATTACH=true
 TIMETAGGER_USB_HARDWARE_ID=151f:0023
+TIMETAGGER_USB_READY_TIMEOUT=15
 FOLLOW_LOGS=true
 LOG_TAIL=100
 ```

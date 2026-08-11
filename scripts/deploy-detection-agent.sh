@@ -26,6 +26,7 @@ TT_DELAYS="${TT_DELAYS:-}"
 DOCKER_EXTRA_ARGS="${DOCKER_EXTRA_ARGS:-}"
 TIMETAGGER_USB_AUTO_ATTACH="${TIMETAGGER_USB_AUTO_ATTACH:-true}"
 TIMETAGGER_USB_HARDWARE_ID="${TIMETAGGER_USB_HARDWARE_ID:-151f:0023}"
+TIMETAGGER_USB_READY_TIMEOUT="${TIMETAGGER_USB_READY_TIMEOUT:-15}"
 FOLLOW_LOGS="${FOLLOW_LOGS:-true}"
 LOG_TAIL="${LOG_TAIL:-100}"
 
@@ -79,7 +80,7 @@ is_windows_shell() {
 }
 
 ensure_windows_timetagger_attached() {
-  local device_line
+  local device_line vendor_id product_id attempt
 
   if ! is_windows_shell || [[ "${TT_TYPE,,}" != "swabian" ]] || ! is_true "$TIMETAGGER_USB_AUTO_ATTACH"; then
     return
@@ -98,22 +99,47 @@ ensure_windows_timetagger_attached() {
 
   if [[ "$device_line" == *"Attached"* ]]; then
     echo "Time Tagger USB device is already attached to Docker Desktop."
-    return
+  else
+    if [[ "$device_line" == *"Not shared"* ]]; then
+      echo "Error: the Time Tagger USB device has not been shared with usbipd-win."
+      echo "Run this once from an Administrator PowerShell, then retry:"
+      echo "  usbipd bind --hardware-id $TIMETAGGER_USB_HARDWARE_ID"
+      exit 1
+    fi
+
+    echo "Attaching Time Tagger USB device $TIMETAGGER_USB_HARDWARE_ID to Docker Desktop..."
+    if ! usbipd.exe attach --wsl --hardware-id "$TIMETAGGER_USB_HARDWARE_ID"; then
+      echo "Error: failed to attach the Time Tagger to Docker Desktop."
+      echo "Confirm Docker Desktop is running, then retry."
+      exit 1
+    fi
   fi
 
-  if [[ "$device_line" == *"Not shared"* ]]; then
-    echo "Error: the Time Tagger USB device has not been shared with usbipd-win."
-    echo "Run this once from an Administrator PowerShell, then retry:"
-    echo "  usbipd bind --hardware-id $TIMETAGGER_USB_HARDWARE_ID"
-    exit 1
-  fi
+  vendor_id="${TIMETAGGER_USB_HARDWARE_ID%%:*}"
+  product_id="${TIMETAGGER_USB_HARDWARE_ID##*:}"
+  echo "Waiting for the Time Tagger device node to become visible in Docker..."
+  for ((attempt = 1; attempt <= TIMETAGGER_USB_READY_TIMEOUT; attempt++)); do
+    if MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker run --rm --privileged \
+      --entrypoint sh \
+      -e USB_VENDOR_ID="$vendor_id" \
+      -e USB_PRODUCT_ID="$product_id" \
+      "$IMAGE_NAME" \
+      -c 'for device in /sys/bus/usb/devices/*; do
+            [ -r "$device/idVendor" ] || continue
+            [ -r "$device/idProduct" ] || continue
+            [ "$(cat "$device/idVendor")" = "$USB_VENDOR_ID" ] || continue
+            [ "$(cat "$device/idProduct")" = "$USB_PRODUCT_ID" ] || continue
+            exit 0
+          done
+          exit 1' >/dev/null 2>&1; then
+      echo "Time Tagger USB device is ready in Docker."
+      return
+    fi
+    sleep 1
+  done
 
-  echo "Attaching Time Tagger USB device $TIMETAGGER_USB_HARDWARE_ID to Docker Desktop..."
-  if ! usbipd.exe attach --wsl --hardware-id "$TIMETAGGER_USB_HARDWARE_ID"; then
-    echo "Error: failed to attach the Time Tagger to Docker Desktop."
-    echo "Confirm Docker Desktop is running, then retry."
-    exit 1
-  fi
+  echo "Error: the Time Tagger was attached, but its device node did not become ready in Docker."
+  exit 1
 }
 
 echo "Stopping and removing existing detection-agent container (if any)..."
