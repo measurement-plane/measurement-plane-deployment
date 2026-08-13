@@ -7,6 +7,7 @@ It supports:
 - core deployment on a central node
 - standalone resource-agent deployment for `detection-agent`
 - standalone resource-agent deployment for `polarization-controller`
+- standalone resource-agent deployment for `wss-controller`
 - one-command local virtual-lab deployment
 - one-command real-lab deployment from a central node over SSH
 
@@ -41,12 +42,15 @@ is not deployed as a resource agent next to a device host.
 - `env/polarization-controller.env.example`: example polarization-controller configuration
 - `env/polarization-controller-alice.env.example`: example Alice polarization-controller config
 - `env/polarization-controller-bob.env.example`: example Bob polarization-controller config
+- `env/wss-controller.env.example`: example wss-controller configuration
 - `scripts/deploy-core.sh`: start the core stack
 - `scripts/stop-core.sh`: stop the core stack
 - `scripts/deploy-detection-agent.sh`: deploy one detection resource agent
 - `scripts/stop-detection-agent.sh`: stop one detection resource agent
 - `scripts/deploy-polarization-controller.sh`: deploy one polarization-control resource agent
 - `scripts/stop-polarization-controller.sh`: stop one polarization-control resource agent
+- `scripts/deploy-wss-controller.sh`: deploy one WSS resource agent
+- `scripts/stop-wss-controller.sh`: stop one WSS resource agent
 - `scripts/deploy-laptop-virtual-lab.sh`: launch the local virtual lab
 - `scripts/stop-laptop-virtual-lab.sh`: stop the local virtual lab
 - `scripts/deploy-real-lab.sh`: deploy the full real lab from the central node
@@ -168,6 +172,39 @@ Important settings:
 - `DRIVER_TYPE`
 
 For `DRIVER_TYPE=virtual` or `DRIVER_TYPE=dummy`, the deploy script does not map physical devices.
+
+## WSS Controller Deployment
+
+Use `wss-controller` on a host connected to the WSS module over RS-232.
+
+Copy and edit the example:
+
+```bash
+cp env/wss-controller.env.example env/wss-controller.env
+```
+
+Deploy:
+
+```bash
+ENV_FILE=env/wss-controller.env ./scripts/deploy-wss-controller.sh
+```
+
+Stop:
+
+```bash
+ENV_FILE=env/wss-controller.env ./scripts/stop-wss-controller.sh
+```
+
+Important settings:
+
+- `BROKER_URL`
+- `ENDPOINT`
+- `DRIVER_TYPE`
+- `WSS_SERIAL_PORT`
+- `WSS_SERIAL_BAUDRATE`
+- `WSS_COMMAND_TIMEOUT`
+
+For `DRIVER_TYPE=dummy`, the deploy script does not map the serial device.
 
 ## Local Virtual Lab
 
