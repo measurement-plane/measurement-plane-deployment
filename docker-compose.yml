@@ -24,11 +24,37 @@ services:
   measurement-plane-gui:
     image: ghcr.io/measurement-plane/gui:latest
     container_name: measurement_plane_gui
-    environment:
-      - BROKER_URL=${BROKER_URL}
-      - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
     ports:
       - "8050:8050"
+    depends_on:
+      - measurement-api
+      - topology-service
+
+  measurement-api:
+    image: ghcr.io/measurement-plane/gui-api:latest
+    container_name: measurement_plane_api
+    environment:
+      - BROKER_URL=${BROKER_URL}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - AUTH_SECRET=${AUTH_SECRET:-change-this-in-production}
+      - TOPOLOGY_SERVICE_URL=http://topology-service:8001
+    depends_on:
+      - nats
+      - topology-service
+
+  topology-service:
+    image: ghcr.io/measurement-plane/topology-service:latest
+    container_name: topology_service
+    environment:
+      - BROKER_URL=${BROKER_URL}
+    volumes:
+      - topology-data:/data
+      - ./secrets/supervisor-pki/ca.crt:/run/secrets/supervisor-ca.crt:ro
+      - ./secrets/supervisor-pki/topology-client.crt:/run/secrets/topology-client.crt:ro
+      - ./secrets/supervisor-pki/topology-client.key:/run/secrets/topology-client.key:ro
+    depends_on:
+      - nats
 
   coincidences-analyzer:
     image: ghcr.io/measurement-plane/coincidences-analyzer:latest
@@ -58,6 +84,26 @@ services:
       - nats
       - coincidences-analyzer
 
+  entanglement-distribution:
+    image: ghcr.io/measurement-plane/entanglement-distribution:latest
+    container_name: entanglement_distribution_container
+    environment:
+      - BROKER_URL=${BROKER_URL}
+      - ENDPOINT=${ENTANGLEMENT_DISTRIBUTION_ENDPOINT:-/entanglement-distribution}
+      - TOPOLOGY_SERVICE_URL=http://topology-service:8001
+      - POLARIZATION_ANALYZER_ENDPOINT=${POLARIZATION_ANALYZER_ENDPOINT:-polarization_analyzer}
+      - COINCIDENCES_ENDPOINT=${COINCIDENCES_ENDPOINT:-coincidences_analyzer}
+      - COINCIDENCES_PEAK0_PS=${ENTANGLEMENT_PEAK0_PS:-0}
+      - COINCIDENCES_RANGE_NS=${ENTANGLEMENT_RANGE_NS:-10}
+      - COINCIDENCES_TIME_BIN_NS=${ENTANGLEMENT_TIME_BIN_NS:-0.1}
+      - COINCIDENCES_WINDOW_NS=${ENTANGLEMENT_WINDOW_NS:-1}
+      - COINCIDENCES_INTEGRATION_MS=${ENTANGLEMENT_INTEGRATION_MS:-100}
+    depends_on:
+      - nats
+      - topology-service
+      - polarization-analyzer
+      - coincidences-analyzer
+
   apc-service:
     image: ghcr.io/measurement-plane/apc-service:latest
     container_name: apc_service_container
@@ -69,3 +115,6 @@ services:
       - APC_VERIFY_SSL=${APC_VERIFY_SSL:-true}
     depends_on:
       - nats
+
+volumes:
+  topology-data:

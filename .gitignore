@@ -11,3 +11,5 @@ docker-compose.override.yml
 .vscode/
 .idea/
 *.log
+secrets/
+dist/

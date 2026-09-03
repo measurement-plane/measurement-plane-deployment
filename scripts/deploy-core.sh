@@ -7,14 +7,19 @@ ENV_FILE="${ENV_FILE:-$ROOT_DIR/.env}"
 
 cd "$ROOT_DIR"
 
+"$SCRIPT_DIR/init-supervisor-pki.sh"
+
 echo "Hard cleanup of any previous Measurement Plane core containers..."
 
 docker rm -f \
   measurement_plane_gui \
+  measurement_plane_api \
+  topology_service \
   experiment-orchestrator \
   coincidences_analyzer_agent_container \
   polarization_analyzer_container \
   twtt_capability_container \
+  entanglement_distribution_container \
   apc_service_container \
   nats 2>/dev/null || true
 

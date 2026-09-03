@@ -1,0 +1,105 @@
+services:
+  nats:
+    image: nats:2.10
+    ports:
+      - "4222:4222"
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf:ro
+    command: ["-c", "/etc/nats/nats.conf"]
+
+  measurement-plane-gui:
+    build:
+      context: ..
+      dockerfile: GUI/Dockerfile
+    ports:
+      - "8050:8050"
+    depends_on:
+      measurement-api:
+        condition: service_healthy
+      topology-service:
+        condition: service_healthy
+
+  measurement-api:
+    build:
+      context: ..
+      dockerfile: GUI/Dockerfile.api
+    environment:
+      VIRTUAL_MODE: "false"
+      BROKER_URL: nats://nats:4222
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin
+      AUTH_SECRET: local-virtual-development-secret
+      TOPOLOGY_SERVICE_URL: http://topology-service:8001
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    depends_on:
+      nats:
+        condition: service_started
+      topology-service:
+        condition: service_healthy
+
+  topology-service:
+    build:
+      context: ..
+      dockerfile: topology-service/Dockerfile.virtual
+    volumes:
+      - local-topology-data:/data
+      - ./secrets/supervisor-pki/ca.crt:/run/secrets/supervisor-ca.crt:ro
+      - ./secrets/supervisor-pki/topology-client.crt:/run/secrets/topology-client.crt:ro
+      - ./secrets/supervisor-pki/topology-client.key:/run/secrets/topology-client.key:ro
+    environment:
+      # Virtual hardware agents run in the VMs and advertise over NATS. Do not
+      # inject predefined Alice/Bob fixtures into the topology resource list.
+      RESOURCE_MODE: real
+      BROKER_URL: nats://nats:4222
+    depends_on:
+      - nats
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  coincidences-analyzer:
+    build:
+      context: ..
+      dockerfile: measurement-plane-deployment/docker/Dockerfile.coincidences-local
+    environment:
+      BROKER_URL: nats://nats:4222
+      ENDPOINT: /coincidences_analyzer
+    depends_on:
+      - nats
+
+  polarization-analyzer:
+    build:
+      context: ..
+      dockerfile: measurement-plane-deployment/docker/Dockerfile.polarization-analyzer-local
+    environment:
+      BROKER_URL: nats://nats:4222
+      ENDPOINT: /polarization_analyzer
+    depends_on:
+      - nats
+      - coincidences-analyzer
+
+  entanglement-distribution:
+    build:
+      context: ..
+      dockerfile: measurement-plane-deployment/docker/Dockerfile.entanglement-distribution-local
+    environment:
+      BROKER_URL: nats://nats:4222
+      ENDPOINT: /entanglement-distribution
+      TOPOLOGY_SERVICE_URL: http://topology-service:8001
+      POLARIZATION_ANALYZER_ENDPOINT: /polarization_analyzer
+      COINCIDENCES_ENDPOINT: /coincidences_analyzer
+      COINCIDENCES_PEAK0_PS: "0"
+    depends_on:
+      topology-service:
+        condition: service_healthy
+      polarization-analyzer:
+        condition: service_started
+
+volumes:
+  local-topology-data:

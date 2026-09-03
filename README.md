@@ -1,399 +1,140 @@
-# Measurement Plane Deployment
+# Measurement Plane deployment
 
-This repository is the single deployment entry point for the Measurement Plane platform.
+This repository has one recommended operating model:
 
-It supports:
+1. run the core platform on one control-plane server;
+2. enroll each Linux resource server once with the mTLS resource supervisor;
+3. add those servers in **GUI → Infrastructure**;
+4. deploy and operate detection or polarization-controller agents from the GUI;
+5. create the optical topology in the GUI or import its JSON document.
 
-- core deployment on a central node
-- standalone resource-agent deployment for `detection-agent`
-- standalone resource-agent deployment for `polarization-controller`
-- standalone resource-agent deployment for `wss-controller`
-- one-command local virtual-lab deployment
-- one-command real-lab deployment from a central node over SSH
+The topology and remote-server inventory are persisted by `topology-service`.
+They are not defined in deployment scripts. The standard stack discovers only
+agents that are actually advertising on NATS; it does not inject Alice, Bob, or
+predefined resource fixtures.
 
-## Core Stack
+## Start the core platform
 
-The core deployment now includes:
+Copy the production environment template and replace the credentials:
 
-- NATS broker
-- experiment orchestrator
-- Measurement Plane GUI
-- coincidences analyzer
-- polarization analyzer
-- two-way time transfer (TWTT) capability
-- APC service
+```bash
+cp env/core.env.example .env
+```
 
-The TWTT capability is a core-side analyzer. It discovers the coincidences
-analyzer through the broker, runs the two configured directions, and combines
-their peaks into time-offset and time-of-flight results. The APC service is
-also part of the core stack because it talks to a remote APC over its API. It
-is not deployed as a resource agent next to a device host.
-
-## Layout
-
-- `docker-compose.yml`: core stack definition
-- `.env`: default core environment
-- `env/core-virtual-lab.env`: tracked env file for the local virtual-lab setup
-- `env/core-hybrid-real-apc.env.example`: example local hybrid env for virtual TT/polarizers with a real APC
-- `env/real-lab.env.example`: example multi-node real-lab deployment config
-- `env/detection-agent.env.example`: example detection-agent configuration
-- `env/detection-agent-alice.env.example`: example Alice detection-agent config
-- `env/detection-agent-bob.env.example`: example Bob detection-agent config
-- `env/polarization-controller.env.example`: example polarization-controller configuration
-- `env/polarization-controller-alice.env.example`: example Alice polarization-controller config
-- `env/polarization-controller-bob.env.example`: example Bob polarization-controller config
-- `env/wss-controller.env.example`: example wss-controller configuration
-- `scripts/deploy-core.sh`: start the core stack
-- `scripts/stop-core.sh`: stop the core stack
-- `scripts/deploy-detection-agent.sh`: deploy one detection resource agent
-- `scripts/stop-detection-agent.sh`: stop one detection resource agent
-- `scripts/deploy-polarization-controller.sh`: deploy one polarization-control resource agent
-- `scripts/stop-polarization-controller.sh`: stop one polarization-control resource agent
-- `scripts/deploy-wss-controller.sh`: deploy one WSS resource agent
-- `scripts/stop-wss-controller.sh`: stop one WSS resource agent
-- `scripts/deploy-laptop-virtual-lab.sh`: launch the local virtual lab
-- `scripts/stop-laptop-virtual-lab.sh`: stop the local virtual lab
-- `scripts/deploy-real-lab.sh`: deploy the full real lab from the central node
-- `scripts/stop-real-lab.sh`: stop the full real lab from the central node
-
-## Core Deployment
-
-The core scripts support `ENV_FILE`. If not provided, they use `.env`.
-
-Example default run:
+At minimum, set a long random `AUTH_SECRET` and change the initial GUI password.
+Then start the platform:
 
 ```bash
 ./scripts/deploy-core.sh
 ```
 
-Example explicit env file:
+Open <http://localhost:8050>. The stack includes NATS, the web frontend,
+measurement API, topology service, experiment orchestrator, coincidences
+analyzer, polarization analyzer, TWTT capability, entanglement-distribution
+service capability, and APC service.
+
+Stop it from another terminal with:
 
 ```bash
-ENV_FILE=env/core-virtual-lab.env ./scripts/deploy-core.sh
+./scripts/stop-core.sh
 ```
 
-Example core variables:
+## Add a resource server
 
-```env
-BROKER_URL=nats://nats:4222
-ORCHESTRATOR_URL=http://experiment-orchestrator:8080
-ORCHESTRATOR_HOST_PORT=18080
-TWTT_ENDPOINT=/twtt
-APC_ENDPOINT=/apc/main
-APC_DRIVER_TYPE=qunnect
-APC_REQUEST_TIMEOUT_S=10
-APC_VERIFY_SSL=true
-```
+A server must first receive a small allow-listed supervisor and its mTLS
+identity. SSH is used only for this one-time enrollment; agent deployment,
+lifecycle, status, and live logs subsequently use the supervisor API.
 
-Notes:
-
-- `deploy-core.sh` runs attached and streams logs in the terminal
-- press `Ctrl+C` to stop it
-- `stop-core.sh` can also stop it from another terminal
-
-Core endpoints:
-
-- GUI: `http://localhost:8050`
-- orchestrator API: `http://localhost:18080`
-- NATS: `localhost:4222`
-
-## Detection Agent Deployment
-
-Use `detection-agent` on a host connected to a time-tagger resource.
-
-Copy and edit the example:
+For a server reachable as `10.10.101.25` with SSH user `admin`:
 
 ```bash
-cp env/detection-agent.env.example env/detection-agent.env
+./scripts/bootstrap-supervisor-node.sh \
+  alice \
+  10.10.101.25 \
+  admin@10.10.101.25 \
+  9443 \
+  22
 ```
 
-Deploy:
+Then open **Infrastructure** and add:
+
+- Name: any useful display name, such as `Alice`
+- Supervisor address: the exact stable IP/DNS name used in the bootstrap command
+- mTLS port: `9443`
+
+The server card reports whether the supervisor, certificate, and Docker engine
+are healthy. Select that server in **Deploy resource agent**, fill in the unique
+agent endpoint, NATS address as seen from the remote server, and hardware or
+virtual-driver settings, then click **Deploy agent**. Progress, readiness,
+failure reason, controls, and live logs remain grouped under that server.
+
+The complete preparation and GUI workflow is in
+[Resource server onboarding](docs/RESOURCE_SUPERVISOR_ONBOARDING.md).
+
+## Create the topology
+
+Resource-server registration and topology design are separate:
+
+- **Infrastructure** says where agents may run and controls their containers.
+- **Topology** describes optical source/analyzer nodes and their links.
+- A topology node binds only to resource agents currently discovered through
+  their Measurement Plane advertisements.
+
+Use **+ Source** or **+ Polarization analyzer**, drag nodes into place, configure
+their live resource bindings, and link two selected nodes. Every change is sent
+immediately to `topology-service`; refreshing the page restores its last accepted
+topology. Importing JSON goes through the same server-side validation.
+
+## Run entanglement distribution
+
+Create two active **Polarization analyzer** topology nodes. Each node must bind
+one live polarization controller plus its H and V time-tagger channels. Open
+**Operations → Services**, choose **Entanglement distribution**, and select the
+two analyzer nodes. The service resolves those bindings from the topology
+service, reports the temporary routing approval, streams the polarization
+fringes as they are measured, then displays the tomography basis matrix.
+
+The caller supplies only the two analyzer node IDs. Link-specific coincidence
+defaults live in `.env` under `ENTANGLEMENT_*`; calibrate
+`ENTANGLEMENT_PEAK0_PS` for the installed optical path before a physical run.
+
+## Local Lima acceptance lab
+
+The sibling `vm-lab` directory is an isolated development fixture for testing
+the same GUI-managed workflow without physical devices. It creates two servers
+and lets the GUI deploy agents using virtual hardware drivers. It does not
+bypass mTLS and no longer injects predefined resources into topology discovery.
 
 ```bash
-ENV_FILE=env/detection-agent.env ./scripts/deploy-detection-agent.sh
+../vm-lab/up.sh
+./scripts/run-local-virtual-gui.sh
 ```
 
-Stop:
-
-```bash
-ENV_FILE=env/detection-agent.env ./scripts/stop-detection-agent.sh
-```
-
-For laptop testing, use `BROKER_URL=nats://host.docker.internal:4222`.
-
-### Windows Time Tagger USB access
-
-Docker Desktop does not retain a USB attachment when Windows or WSL restarts. Sharing the device is persistent, so run this once from an Administrator PowerShell on each laptop:
-
-```powershell
-usbipd bind --hardware-id 151f:0023
-```
-
-For `TT_TYPE=swabian`, the deployment script then automatically attaches that hardware ID to Docker Desktop every time it runs. The default settings are:
-
-```env
-TIMETAGGER_USB_AUTO_ATTACH=true
-TIMETAGGER_USB_HARDWARE_ID=151f:0023
-TIMETAGGER_USB_READY_TIMEOUT=15
-FOLLOW_LOGS=true
-LOG_TAIL=100
-```
-
-The container remains detached and continues running when `Ctrl+C` stops log viewing. Set `FOLLOW_LOGS=false` for non-interactive deployment.
-
-## Polarization Controller Deployment
-
-Use `polarization-controller` on a host connected to the waveplate controller hardware.
-
-Copy and edit the example:
-
-```bash
-cp env/polarization-controller.env.example env/polarization-controller.env
-```
-
-Deploy:
-
-```bash
-ENV_FILE=env/polarization-controller.env ./scripts/deploy-polarization-controller.sh
-```
-
-Stop:
-
-```bash
-ENV_FILE=env/polarization-controller.env ./scripts/stop-polarization-controller.sh
-```
-
-Important settings:
-
-- `BROKER_URL`
-- `ENDPOINT`
-- `HWP_ADDR`
-- `QWP_ADDR`
-- `DRIVER_TYPE`
-
-For `DRIVER_TYPE=virtual` or `DRIVER_TYPE=dummy`, the deploy script does not map physical devices.
-
-## WSS Controller Deployment
-
-Use `wss-controller` on a host connected to the WSS module over RS-232.
-
-Copy and edit the example:
-
-```bash
-cp env/wss-controller.env.example env/wss-controller.env
-```
-
-Deploy:
-
-```bash
-ENV_FILE=env/wss-controller.env ./scripts/deploy-wss-controller.sh
-```
-
-Stop:
-
-```bash
-ENV_FILE=env/wss-controller.env ./scripts/stop-wss-controller.sh
-```
-
-Important settings:
-
-- `BROKER_URL`
-- `ENDPOINT`
-- `DRIVER_TYPE`
-- `WSS_SERIAL_PORT`
-- `WSS_SERIAL_BAUDRATE`
-- `WSS_COMMAND_TIMEOUT`
-
-For `DRIVER_TYPE=dummy`, the deploy script does not map the serial device.
-
-## Local Virtual Lab
-
-The one-command laptop launcher starts:
-
-- two virtual detection agents
-- two virtual polarization controllers
-- the core stack with the APC service in virtual mode
-
-Run:
-
-```bash
-./scripts/deploy-laptop-virtual-lab.sh
-```
-
-This script uses:
-
-- `env/detection-agent-virtual-alice.env`
-- `env/detection-agent-virtual-bob.env`
-- `env/polarization-controller-virtual-alice.env`
-- `env/polarization-controller-virtual-bob.env`
-- `env/core-virtual-lab.env`
-
-If you want different files:
-
-```bash
-ALICE_DETECTOR_ENV=env/my-detector-alice.env \
-BOB_DETECTOR_ENV=env/my-detector-bob.env \
-ALICE_POLARIZER_ENV=env/my-polarizer-alice.env \
-BOB_POLARIZER_ENV=env/my-polarizer-bob.env \
-CORE_ENV_FILE=env/my-core.env \
-./scripts/deploy-laptop-virtual-lab.sh
-```
-
-Stop it from another terminal:
-
-```bash
-./scripts/stop-laptop-virtual-lab.sh
-```
-
-## Local Hybrid Lab
-
-If you want:
-
-- virtual Alice/Bob timetaggers
-- virtual Alice/Bob polarization controllers
-- real APC through its REST API
-
-then use the same local virtual-lab launcher, but point it at a core env file with a real APC configuration.
-
-Setup:
-
-```bash
-cp env/core-hybrid-real-apc.env.example env/core-hybrid-real-apc.env
-```
-
-Then edit:
-
-- `APC_VERIFY_SSL`
-
-Run:
-
-```bash
-CORE_ENV_FILE=env/core-hybrid-real-apc.env ./scripts/deploy-laptop-virtual-lab.sh
-```
-
-This keeps these tracked virtual agent env files:
-
-- `env/detection-agent-virtual-alice.env`
-- `env/detection-agent-virtual-bob.env`
-- `env/polarization-controller-virtual-alice.env`
-- `env/polarization-controller-virtual-bob.env`
-
-and only switches the core APC service from virtual to real.
-
-## Real Lab Deployment
-
-The real-lab deployment model is:
-
-- central node runs the core stack
-- Alice host runs the Alice hardware-adjacent agents
-- Bob host runs the Bob hardware-adjacent agents
-- the central node deploys the remote hosts over SSH
-
-The remote hosts do not need the repo preinstalled manually. The deployment script synchronizes the
-`measurement-plane-deployment` directory to the target path and then runs the existing per-node deployment scripts there.
-
-Before deploying a remote agent, the helper checks whether Docker is reachable on the remote host. If the Docker daemon is not running, it tries to start it using common service commands.
-
-### SSH Recommendation
-
-Use SSH keys or SSH config aliases.
-
-Do not store SSH passwords in this repository or in tracked env files.
-
-Recommended:
-
-```sshconfig
-Host alice-qnet
-    HostName 10.0.0.21
-    User labuser
-    IdentityFile ~/.ssh/qnet_lab
-
-Host bob-qnet
-    HostName 10.0.0.22
-    User labuser
-    IdentityFile ~/.ssh/qnet_lab
-```
-
-Then your real-lab env can use:
-
-```env
-ALICE_SSH_TARGET=alice-qnet
-BOB_SSH_TARGET=bob-qnet
-```
-
-### Setup
-
-1. Copy the example lab config:
-
-```bash
-cp env/real-lab.env.example env/real-lab.env
-```
-
-2. Create the real hardware env files referenced there, for example:
-
-```bash
-cp env/detection-agent-alice.env.example env/detection-agent-alice.env
-cp env/detection-agent-bob.env.example env/detection-agent-bob.env
-cp env/polarization-controller-alice.env.example env/polarization-controller-alice.env
-cp env/polarization-controller-bob.env.example env/polarization-controller-bob.env
-```
-
-3. Update:
-
-- `env/real-lab.env`
-- `env/detection-agent-alice.env`
-- `env/detection-agent-bob.env`
-- `env/polarization-controller-alice.env`
-- `env/polarization-controller-bob.env`
-- your central-node core env file, typically `.env`
-
-Important:
-
-- on remote Alice/Bob hosts, set `BROKER_URL` to the central node's reachable QNet IP, for example:
-  - `nats://10.0.0.10:4222`
-- detection and polarization controller endpoints should be unique and stable
-- remote hosts must have Docker, `bash`, `tar`, and SSH access enabled
-- here `bash` means a normal Linux shell environment on the remote node, not Git Bash on Windows
-- if Docker is installed but the daemon is not running after a reboot, the deployment helper tries to start it automatically
-- if your lab hosts require a nonstandard Docker start command, set `REMOTE_DOCKER_START_CMD` in `env/real-lab.env`
-
-### Deploy
-
-From the central node:
-
-```bash
-LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
-```
-
-This will:
-
-- deploy the core locally in detached mode
-- synchronize the deployment repo to Alice and Bob
-- deploy detection and polarization-controller containers on both remote hosts
-
-### Stop
-
-From the central node:
-
-```bash
-LAB_ENV_FILE=env/real-lab.env ./scripts/stop-real-lab.sh
-```
-
-### Dry Run
-
-To print what would be executed without actually deploying:
-
-```bash
-DRY_RUN=1 LAB_ENV_FILE=env/real-lab.env ./scripts/deploy-real-lab.sh
-```
-
-## Deployment Model
-
-- `detection-agent` and `polarization-controller` are resource agents and can be deployed independently on resource-adjacent hosts
-- in a real lab, those resource agents should run on the remote hardware-adjacent hosts and connect back to the central node broker
-- `apc-service` is a core-side capability and should be deployed with the core stack
-- `twtt-capability` is a core-side analyzer and is deployed with the core stack, alongside `coincidences-analyzer` and `polarization-analyzer`
-- `twtt-capability` uses `ghcr.io/measurement-plane/twtt-capability:latest` and advertises `measure-twtt` at `TWTT_ENDPOINT` (default `/twtt`)
-- `apc-service` keeps a small public contract: `start`, `stop`, and `check_link`
-- `polarization-analyzer` continues to use the same APC-aware workflow, but it now talks to the standalone APC service instead of APC logic embedded in the polarization-controller repo
-- in real APC mode, analyzer calls must provide `ip_address`, `port`, and `device_id` in the APC parameter block
+See [`vm-lab/README.md`](../vm-lab/README.md) for its port mappings and first-time
+enrollment. Files whose names include `virtual`, `laptop`, `real-lab`, or direct
+agent deploy scripts are compatibility/development tooling; they are not part of
+the recommended GUI-managed production workflow. See [scripts/README.md](scripts/README.md).
+
+## Security and persistence
+
+- Supervisor PKI is generated under ignored `secrets/supervisor-pki/`; back it up
+  securely and never copy the CA private key to a resource server.
+- Restrict TCP `9443` to the topology-service host even though mTLS is mandatory.
+- Resource servers need outbound access to GHCR and to the NATS broker.
+- `topology-data` stores the accepted topology and registered-server inventory.
+- Resource-agent containers use `--restart unless-stopped`; the supervisor is a
+  systemd service enabled at boot.
+
+## Script map
+
+The normal workflow needs only these scripts:
+
+| Script | Purpose |
+| --- | --- |
+| `deploy-core.sh` | Start the central platform |
+| `stop-core.sh` | Stop the central platform |
+| `bootstrap-supervisor-node.sh` | Enroll one resource server once |
+| `create-supervisor-node-bundle.sh` | Build an offline/manual enrollment bundle |
+| `init-supervisor-pki.sh` | Initialize the control-plane trust material |
+
+All other scripts are catalogued and scoped in [scripts/README.md](scripts/README.md).

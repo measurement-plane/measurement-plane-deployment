@@ -1,0 +1,9 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY measurement_plane ./measurement_plane
+COPY coincidences-analyzer/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+COPY coincidences-analyzer .
+
+ENTRYPOINT ["python", "agent_manager.py"]

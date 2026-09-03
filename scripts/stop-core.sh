@@ -13,9 +13,12 @@ docker compose --env-file "$ENV_FILE" down --remove-orphans
 echo "Force removing any leftover core containers..."
 docker rm -f \
   measurement_plane_gui \
+  measurement_plane_api \
+  topology_service \
   experiment-orchestrator \
   coincidences_analyzer_agent_container \
   polarization_analyzer_container \
   twtt_capability_container \
+  entanglement_distribution_container \
   apc_service_container \
   nats 2>/dev/null || true

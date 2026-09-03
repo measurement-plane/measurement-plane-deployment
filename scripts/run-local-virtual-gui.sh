@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+"$ROOT_DIR/scripts/init-supervisor-pki.sh"
+docker compose -f docker-compose.local-virtual.yml up --build
