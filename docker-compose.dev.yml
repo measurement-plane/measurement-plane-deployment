@@ -1,0 +1,12 @@
+services:
+  measurement-plane-gui:
+    image: ghcr.io/measurement-plane/gui:dev
+
+  measurement-api:
+    image: ghcr.io/measurement-plane/gui-api:dev
+
+  topology-service:
+    image: ghcr.io/measurement-plane/topology-service:dev
+
+  entanglement-distribution:
+    image: ghcr.io/measurement-plane/entanglement-distribution:dev

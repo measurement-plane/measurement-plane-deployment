@@ -28,6 +28,18 @@ Then start the platform:
 ./scripts/deploy-core.sh
 ```
 
+That command deliberately uses released `latest` images. To test the current
+GUI, topology, and entanglement-distribution work without changing production,
+use the development channel instead:
+
+```bash
+CORE_CHANNEL=dev ./scripts/deploy-core.sh
+```
+
+Development image build scripts publish `:dev` by default. Promoting a tested
+build to `:latest` must be an explicit release action; ordinary development
+builds never update `latest`.
+
 Open <http://localhost:8050>. The stack includes NATS, the web frontend,
 measurement API, topology service, experiment orchestrator, coincidences
 analyzer, polarization analyzer, TWTT capability, entanglement-distribution
