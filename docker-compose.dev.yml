@@ -8,5 +8,8 @@ services:
   topology-service:
     image: ghcr.io/measurement-plane/topology-service:dev
 
+  polarization-analyzer:
+    image: ghcr.io/measurement-plane/polarization-analyzer:dev
+
   entanglement-distribution:
     image: ghcr.io/measurement-plane/entanglement-distribution:dev
