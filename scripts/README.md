@@ -34,3 +34,16 @@ Do not use the legacy `real-lab` launcher for a new installation. It copies the
 deployment repository over SSH and manages agents directly, whereas the current
 architecture installs one constrained supervisor and performs ongoing operations
 through its authenticated API.
+
+## SNSPD agent (direct deployment)
+
+- `deploy-snspd-agent.sh`, `stop-snspd-agent.sh`: Quantum Opus SNSPD (QOELEC)
+  resource agent, run on the host the QOELEC is plugged into over USB. Configure
+  it from `env/snspd-agent.env.example`; `env/snspd-agent-virtual.env` runs the
+  virtual driver. The laptop virtual lab and the `real-lab` launcher (when
+  `SNSPD_SSH_TARGET` is set) also start it.
+
+The resource supervisor does not allow-list the `snspd-agent` image yet, so this
+agent cannot be deployed from **GUI → Infrastructure**. Stop the standalone
+`QuantumOpusServer.py` / `QuantumOpusLogger.py` scripts first; only one process
+can hold the serial port. See the `snspd-agent` README for the settings.

@@ -26,6 +26,14 @@ require_var BOB_POLARIZER_ENV
 REMOTE_DEPLOY_ROOT="${REMOTE_DEPLOY_ROOT:-~/measurement-plane-deployment}"
 ALICE_REMOTE_DEPLOY_ROOT="${ALICE_REMOTE_DEPLOY_ROOT:-$REMOTE_DEPLOY_ROOT}"
 BOB_REMOTE_DEPLOY_ROOT="${BOB_REMOTE_DEPLOY_ROOT:-$REMOTE_DEPLOY_ROOT}"
+SNSPD_SSH_TARGET="${SNSPD_SSH_TARGET:-}"
+SNSPD_REMOTE_DEPLOY_ROOT="${SNSPD_REMOTE_DEPLOY_ROOT:-$REMOTE_DEPLOY_ROOT}"
+
+if [[ -n "$SNSPD_SSH_TARGET" ]]; then
+  require_var SNSPD_ENV
+  echo "Stopping SNSPD agent on $SNSPD_SSH_TARGET..."
+  stop_remote_agent "$SNSPD_SSH_TARGET" "$SNSPD_REMOTE_DEPLOY_ROOT" "$SNSPD_ENV" "stop-snspd-agent.sh"
+fi
 
 echo "Stopping Alice polarization controller on $ALICE_SSH_TARGET..."
 stop_remote_agent "$ALICE_SSH_TARGET" "$ALICE_REMOTE_DEPLOY_ROOT" "$ALICE_POLARIZER_ENV" "stop-polarization-controller.sh"

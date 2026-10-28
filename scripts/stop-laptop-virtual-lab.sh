@@ -8,10 +8,12 @@ ALICE_DETECTOR_ENV="${ALICE_DETECTOR_ENV:-$ROOT_DIR/env/detection-agent-virtual-
 BOB_DETECTOR_ENV="${BOB_DETECTOR_ENV:-$ROOT_DIR/env/detection-agent-virtual-bob.env}"
 ALICE_POLARIZER_ENV="${ALICE_POLARIZER_ENV:-$ROOT_DIR/env/polarization-controller-virtual-alice.env}"
 BOB_POLARIZER_ENV="${BOB_POLARIZER_ENV:-$ROOT_DIR/env/polarization-controller-virtual-bob.env}"
+SNSPD_ENV="${SNSPD_ENV:-$ROOT_DIR/env/snspd-agent-virtual.env}"
 CORE_ENV_FILE="${CORE_ENV_FILE:-$ROOT_DIR/env/core-virtual-lab.env}"
 
 ENV_FILE="$ALICE_DETECTOR_ENV" "$SCRIPT_DIR/stop-detection-agent.sh"
 ENV_FILE="$BOB_DETECTOR_ENV" "$SCRIPT_DIR/stop-detection-agent.sh"
 ENV_FILE="$ALICE_POLARIZER_ENV" "$SCRIPT_DIR/stop-polarization-controller.sh"
 ENV_FILE="$BOB_POLARIZER_ENV" "$SCRIPT_DIR/stop-polarization-controller.sh"
+ENV_FILE="$SNSPD_ENV" "$SCRIPT_DIR/stop-snspd-agent.sh"
 ENV_FILE="$CORE_ENV_FILE" "$SCRIPT_DIR/stop-core.sh"

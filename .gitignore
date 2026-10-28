@@ -7,6 +7,7 @@ env/*.env
 !env/detection-agent-virtual-bob.env
 !env/polarization-controller-virtual-alice.env
 !env/polarization-controller-virtual-bob.env
+!env/snspd-agent-virtual.env
 docker-compose.override.yml
 .vscode/
 .idea/

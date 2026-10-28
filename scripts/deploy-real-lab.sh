@@ -26,6 +26,8 @@ require_var BOB_POLARIZER_ENV
 REMOTE_DEPLOY_ROOT="${REMOTE_DEPLOY_ROOT:-~/measurement-plane-deployment}"
 ALICE_REMOTE_DEPLOY_ROOT="${ALICE_REMOTE_DEPLOY_ROOT:-$REMOTE_DEPLOY_ROOT}"
 BOB_REMOTE_DEPLOY_ROOT="${BOB_REMOTE_DEPLOY_ROOT:-$REMOTE_DEPLOY_ROOT}"
+SNSPD_SSH_TARGET="${SNSPD_SSH_TARGET:-}"
+SNSPD_REMOTE_DEPLOY_ROOT="${SNSPD_REMOTE_DEPLOY_ROOT:-$REMOTE_DEPLOY_ROOT}"
 DEPLOY_CORE_FIRST="${DEPLOY_CORE_FIRST:-1}"
 
 echo "Deploying Measurement Plane real lab"
@@ -49,6 +51,12 @@ deploy_remote_agent "$BOB_SSH_TARGET" "$BOB_REMOTE_DEPLOY_ROOT" "$BOB_DETECTOR_E
 
 echo "Deploying Bob polarization controller on $BOB_SSH_TARGET..."
 deploy_remote_agent "$BOB_SSH_TARGET" "$BOB_REMOTE_DEPLOY_ROOT" "$BOB_POLARIZER_ENV" "deploy-polarization-controller.sh"
+
+if [[ -n "$SNSPD_SSH_TARGET" ]]; then
+  require_var SNSPD_ENV
+  echo "Deploying SNSPD agent on $SNSPD_SSH_TARGET..."
+  deploy_remote_agent "$SNSPD_SSH_TARGET" "$SNSPD_REMOTE_DEPLOY_ROOT" "$SNSPD_ENV" "deploy-snspd-agent.sh"
+fi
 
 if [[ "$DEPLOY_CORE_FIRST" != "1" ]]; then
   echo "Deploying core stack on central node..."
