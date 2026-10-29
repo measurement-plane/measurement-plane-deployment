@@ -51,6 +51,13 @@ if [[ -f "$ENV_FILE" ]]; then
   done < "$ENV_FILE"
 fi
 
+# Bias limits are specific to each SNSPD unit, so real hardware has no default.
+# Checked before the running container is touched.
+if [[ "$SNSPD_DRIVER_TYPE" != "virtual" && -z "${SNSPD_MAX_BIAS_UA:-}" && -z "${SNSPD_DEFAULT_MAX_BIAS_UA:-}" ]]; then
+  echo "Error: set SNSPD_MAX_BIAS_UA to this SNSPD unit's per-channel bias limits in uA from its datasheet, e.g. SNSPD_MAX_BIAS_UA=1=12.2,2=12.1" >&2
+  exit 1
+fi
+
 echo "Stopping and removing existing snspd-agent container (if any)..."
 docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
 docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
