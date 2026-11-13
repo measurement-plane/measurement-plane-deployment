@@ -13,6 +13,11 @@ DRIVER_TYPE="${DRIVER_TYPE:-serial}"
 WSS_SERIAL_PORT="${WSS_SERIAL_PORT:-/dev/ttyUSB0}"
 WSS_SERIAL_BAUDRATE="${WSS_SERIAL_BAUDRATE:-115200}"
 WSS_COMMAND_TIMEOUT="${WSS_COMMAND_TIMEOUT:-2.0}"
+WSS_MODULE_SERIAL="${WSS_MODULE_SERIAL:-}"
+WSS_SERIAL_MATCH="${WSS_SERIAL_MATCH:-}"
+WSS_SERIAL_EXCLUDE="${WSS_SERIAL_EXCLUDE:-}"
+WSS_DISCOVERY_BAUDRATES="${WSS_DISCOVERY_BAUDRATES:-}"
+WSS_PROBE_TIMEOUT="${WSS_PROBE_TIMEOUT:-0.5}"
 DOCKER_EXTRA_ARGS="${DOCKER_EXTRA_ARGS:-}"
 
 if [[ -f "$ENV_FILE" ]]; then
@@ -56,7 +61,13 @@ if [[ "$BROKER_URL" == *"host.docker.internal"* ]] && [[ "$DOCKER_EXTRA_ARGS" !=
   DOCKER_CMD+=" --add-host=host.docker.internal:host-gateway"
 fi
 if [[ "$DRIVER_TYPE" != "virtual" && "$DRIVER_TYPE" != "dummy" ]]; then
-  DOCKER_CMD+=" --device=\"$WSS_SERIAL_PORT\""
+  if [[ "$WSS_SERIAL_PORT" == "auto" ]]; then
+    # Auto mode probes every USB serial port, including ones plugged in later:
+    # the host's /dev read-only, plus the ttyUSB (188) and ttyACM (166) classes.
+    DOCKER_CMD+=" -v /dev:/dev:ro --device-cgroup-rule='c 188:* rmw' --device-cgroup-rule='c 166:* rmw'"
+  else
+    DOCKER_CMD+=" --device=\"$WSS_SERIAL_PORT\""
+  fi
   DOCKER_CMD+=" --group-add dialout"
 fi
 DOCKER_CMD+=" -e BROKER_URL=\"$BROKER_URL\""
@@ -65,6 +76,11 @@ DOCKER_CMD+=" -e DRIVER_TYPE=\"$DRIVER_TYPE\""
 DOCKER_CMD+=" -e WSS_SERIAL_PORT=\"$WSS_SERIAL_PORT\""
 DOCKER_CMD+=" -e WSS_SERIAL_BAUDRATE=\"$WSS_SERIAL_BAUDRATE\""
 DOCKER_CMD+=" -e WSS_COMMAND_TIMEOUT=\"$WSS_COMMAND_TIMEOUT\""
+DOCKER_CMD+=" -e WSS_MODULE_SERIAL=\"$WSS_MODULE_SERIAL\""
+DOCKER_CMD+=" -e WSS_SERIAL_MATCH=\"$WSS_SERIAL_MATCH\""
+DOCKER_CMD+=" -e WSS_SERIAL_EXCLUDE=\"$WSS_SERIAL_EXCLUDE\""
+DOCKER_CMD+=" -e WSS_DISCOVERY_BAUDRATES=\"$WSS_DISCOVERY_BAUDRATES\""
+DOCKER_CMD+=" -e WSS_PROBE_TIMEOUT=\"$WSS_PROBE_TIMEOUT\""
 
 if [[ -n "$DOCKER_EXTRA_ARGS" ]]; then
   DOCKER_CMD+=" $DOCKER_EXTRA_ARGS"
@@ -82,3 +98,6 @@ echo "  container: $CONTAINER_NAME"
 echo "  endpoint : $ENDPOINT"
 echo "  broker   : $BROKER_URL"
 echo "  driver   : $DRIVER_TYPE"
+if [[ "$DRIVER_TYPE" != "virtual" && "$DRIVER_TYPE" != "dummy" ]]; then
+  echo "  port     : $WSS_SERIAL_PORT${WSS_MODULE_SERIAL:+ (module $WSS_MODULE_SERIAL)}"
+fi
